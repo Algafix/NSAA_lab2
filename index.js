@@ -7,7 +7,41 @@ const JwtStrategy = require('passport-jwt').Strategy
 const jwt = require('jsonwebtoken')
 const cookieParser = require('cookie-parser')
 const fortune = require('fortune-teller')
-const jwtSecret = require('crypto').randomBytes(32) // aes 256?
+const jwtSecret = require('crypto').randomBytes(32) // aes256
+const bcrypt = require('bcrypt')
+
+
+
+// ----------------------------------------------------------- //
+// ------------------------ DB INIT -------------------------- //
+// ----------------------------------------------------------- //
+
+const JsonDB = require('node-json-db').JsonDB
+const DBConfig = require('node-json-db/dist/lib/JsonDBConfig').Config
+const db = new JsonDB(new DBConfig("usersDB", true, true, '/'));
+
+// Just for testing, (obviously) not secure
+
+addUser = function(user) {
+  return function(err, hashedPWD) {
+    if (err) {
+      console.log("Error hashing the password.", err)
+    } else {
+      db.push("/"+user, {username: user, password: hashedPWD});
+    }
+  }
+}
+
+// bcrypt.hash(myPlaintextPassword, saltRounds, function(err, hash)
+bcrypt.hash('walruspassword', 10, addUser('walrus'))
+bcrypt.hash('aleixpassword', 10, addUser('aleix'))
+bcrypt.hash('nsaapassword', 10, addUser('nsaa'))
+
+
+
+// ----------------------------------------------------------- //
+// ---------------------- APP CONFIG ------------------------- //
+// ----------------------------------------------------------- //
 
 const port = 3000
 
@@ -38,14 +72,24 @@ passport.use('local_login', new LocalStrategy(
       session: false // we will store a JWT in the cookie with all the required session data. Our server does not need to keep a session, it's stateless
     },
     (username, password, done) => {
-      if (username === 'walrus' && password === 'walrus') {
-        const user = { 
-          username: 'walrus',
-          description: 'the only user that deserves to contact the fortune teller'
-        }
-        return done(null, user) // the first argument for done is the error, if any. In our case no error so that null. The object user will be added by the passport middleware to req.user and thus will be available there for the next middleware and/or the route handler 
+      try {
+        var dbUser = db.getData('/' + username)
+        bcrypt.compare(password, dbUser.password, (err, result) => {
+          if (err) {
+            return done(err, false)
+          }
+          if (result) {
+            const user = { 
+              username: dbUser.username,
+              description: 'A nice user'
+            }
+            return done(null, user)
+          }
+          return done(null, false)
+        })
+      } catch(error) {
+        return done(null, false)
       }
-      return done(null, false)  // in passport returning false as the user object means that the authentication process failed. 
     }
 ))
 
@@ -57,7 +101,6 @@ passport.use('jwt_auth', new JwtStrategy(
     }
   },
   (jwt_payload, done) => {
-    //console.log('decoded JWT payload: ', jwt_payload);
     if(jwt_payload) {
       return done(null, jwt_payload.sub)
     }
