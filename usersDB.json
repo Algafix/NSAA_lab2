@@ -1,0 +1,14 @@
+{
+    "walrus": {
+        "username": "walrus",
+        "password": "$2b$10$ESSqMXScTCqEGTO/5pFgjOYOvuzIzJW/.KnsmvpRI0uOROxm.vjmm"
+    },
+    "aleix": {
+        "username": "aleix",
+        "password": "$2b$10$lKRdd0IqIXwtA8RNovevgu9BVMkBb53nfiOWo4jMdR4bK.3F.XTf6"
+    },
+    "nsaa": {
+        "username": "nsaa",
+        "password": "$2b$10$IcjY/tsxLHZpl5VNJtCeL..478JqpozVCCTzkKg.r2W/AHJUER2Zm"
+    }
+}

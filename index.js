@@ -45,7 +45,6 @@ bcrypt.hash('nsaapassword', 10, addUser('nsaa'))
 
 const port = 3000
 
-// express as a function returns an app
 const app = express()
 app.use(logger('dev'))
 app.use(express.urlencoded({ extended: true })) // needed to retrieve html form fields (it's a requirement of the local strategy)
@@ -93,6 +92,13 @@ passport.use('local_login', new LocalStrategy(
     }
 ))
 
+/**
+ * Configure the JWT authentication strategy.
+ * Sets the key used to compute abría incluido los the HMAC and defines a function to extract the JWT
+ * from the request (in our case, stored in the cookies).
+ * Then we specify the verify function that will be called if the verification
+ * is correct. jwt_payload contains the content of que JWT.
+ */
 passport.use('jwt_auth', new JwtStrategy(
   {
     secretOrKey: jwtSecret,
@@ -117,6 +123,11 @@ passport.use('jwt_auth', new JwtStrategy(
 
 // ----------------------- ROOT ------------------------------ //
 
+/**
+ * If the JWT auth is correct, sends a fortune along with the user name extracted
+ * from the cookie and appended to the request in the jwt_auth middleware.
+ * If the JWT auth is incorrect, redirects to the login page.
+ */
 app.get('/',
   passport.authenticate('jwt_auth', {failureRedirect: '/login', session: false}),
   (req, res) => {
@@ -150,9 +161,6 @@ app.post('/login',
 
     // generate a signed json web token. By default the signing algorithm is HS256 (HMAC-SHA256), i.e. we will 'sign' with a symmetric secret
     const token = jwt.sign(jwtClaims, jwtSecret)
-
-    // Just for testing, send the JWT directly to the browser. Later on we should send the token inside a cookie.
-    //res.json(token)
     
     res.cookie('jwt_session', token)
 
@@ -167,6 +175,9 @@ app.post('/login',
 
 // ----------------------- LOGOUT----------------------------- //
 
+/**
+ * Deletes the cookie (the session) and redirects to the main page.
+ */
 app.get('/logout', (req, res) => {
   res.clearCookie('jwt_session')
   res.redirect('/')
