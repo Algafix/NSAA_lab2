@@ -86,7 +86,7 @@ We decided to use bcrypt for the password hashing and store the passwords in a f
 
 For the database we used the ```node-json-database``` package with the most easy configuration. The DB objects are stored in the ```usersDB.json``` file, to create a new object we use  ```db.push("path", {object})``` and to retrieve it ```db.getData("path")```.
 
-To hash the passwords for every user we have used the asynchronous hash function of the ```bcrypt``` packet (is more secure against timing attacks). For this PoC we create the DB with 3 users and hashed passwords every time the app starts. Obviously, in a development scenario, a sing-up endpoint must exist that handles the user registration.
+To hash the passwords for every user we have used the asynchronous hash function of the ```bcrypt``` packet (it is less CPU blocking than the synchronous one). For this PoC we create the DB with 3 users and hashed passwords every time the app starts. Obviously, in a development scenario, a sing-up endpoint must exist that handles the user registration.
 
 At the end, the database configuration lay as:
 
