@@ -2,41 +2,13 @@ const path = require('path')
 const express = require('express')
 const logger = require('morgan')
 const passport = require('passport')
-const LocalStrategy = require('passport-local').Strategy
-const JwtStrategy = require('passport-jwt').Strategy
-const jwt = require('jsonwebtoken')
 const cookieParser = require('cookie-parser')
 const fortune = require('fortune-teller')
-const jwtSecret = require('crypto').randomBytes(32) // aes256
-const bcrypt = require('bcrypt')
 
 
-
-// ----------------------------------------------------------- //
-// ------------------------ DB INIT -------------------------- //
-// ----------------------------------------------------------- //
-
-const JsonDB = require('node-json-db').JsonDB
-const DBConfig = require('node-json-db/dist/lib/JsonDBConfig').Config
-const db = new JsonDB(new DBConfig("usersDB", true, true, '/'));
-
-// Just for testing, (obviously) not secure
-
-addUser = function(user) {
-  return function(err, hashedPWD) {
-    if (err) {
-      console.log("Error hashing the password.", err)
-    } else {
-      db.push("/"+user, {username: user, password: hashedPWD});
-    }
-  }
-}
-
-// bcrypt.hash(myPlaintextPassword, saltRounds, function(err, hash)
-bcrypt.hash('walruspassword', 10, addUser('walrus'))
-bcrypt.hash('aleixpassword', 10, addUser('aleix'))
-bcrypt.hash('nsaapassword', 10, addUser('nsaa'))
-
+const GitHubRouter = require('./routers/authGitHub')
+const genCookie = require('./middlewares/cookieMiddleware')
+const strategies = require('./passportStrats')
 
 
 // ----------------------------------------------------------- //
@@ -57,62 +29,11 @@ app.use(cookieParser());
 // ---------------------- STRATEGIES-------------------------- //
 // ----------------------------------------------------------- //
 
-/*
-Configure the local strategy for use by Passport.
-The local strategy requires a `verify` function which receives the credentials
-(`username` and `password`) submitted by the user.  The function must verify
-that the username and password are correct and then invoke `done` with a user
-object, which will be set at `req.user` in route handlers after authentication.
-*/
-passport.use('local_login', new LocalStrategy(
-    {
-      usernameField: 'username',  // it MUST match the name of the input field for the username in the login HTML formulary
-      passwordField: 'password',  // it MUST match the name of the input field for the password in the login HTML formulary
-      session: false // we will store a JWT in the cookie with all the required session data. Our server does not need to keep a session, it's stateless
-    },
-    (username, password, done) => {
-      try {
-        var dbUser = db.getData('/' + username)
-        bcrypt.compare(password, dbUser.password, (err, result) => {
-          if (err) {
-            return done(err, false)
-          }
-          if (result) {
-            const user = { 
-              username: dbUser.username,
-              description: 'A nice user'
-            }
-            return done(null, user)
-          }
-          return done(null, false)
-        })
-      } catch(error) {
-        return done(null, false)
-      }
-    }
-))
+passport.use('local_login', strategies.localStrat)
 
-/**
- * Configure the JWT authentication strategy.
- * Sets the key used to compute abría incluido los the HMAC and defines a function to extract the JWT
- * from the request (in our case, stored in the cookies).
- * Then we specify the verify function that will be called if the verification
- * is correct. jwt_payload contains the content of que JWT.
- */
-passport.use('jwt_auth', new JwtStrategy(
-  {
-    secretOrKey: jwtSecret,
-    jwtFromRequest: (req) => {
-      return req.cookies.jwt_session
-    }
-  },
-  (jwt_payload, done) => {
-    if(jwt_payload) {
-      return done(null, jwt_payload.sub)
-    }
-    return done(null, false)
-  }
-))
+passport.use('jwt_auth', strategies.jwtStrat)
+
+passport.use(strategies.gitHubOAuth)
 
 
 
@@ -120,6 +41,7 @@ passport.use('jwt_auth', new JwtStrategy(
 // ---------------------- ROUTES ----------------------------- //
 // ----------------------------------------------------------- //
 
+app.use('/auth/github', GitHubRouter)
 
 // ----------------------- ROOT ------------------------------ //
 
@@ -143,32 +65,14 @@ app.get('/',
 // ----------------------- LOGIN ----------------------------- //
 
 app.get('/login', (req, res) => {
-    res.sendFile(path.join(__dirname, 'login.html'))
+    res.sendFile(path.join(__dirname, '/views/login.html'))
 })
 
 app.post('/login',
   passport.authenticate('local_login', { failureRedirect: '/login', session: false }),
-  (req, res) => { //
-    // we should create here the JWT for the fortune teller and send it to the user agent inside a cookie.
-    // This is what ends up in our JWT
-    const jwtClaims = {
-      sub: req.user.username,
-      iss: 'localhost:3000',
-      aud: 'localhost:3000',
-      exp: Math.floor(Date.now() / 1000) + 604800, // 1 week (7×24×60×60=604800s) from now
-      role: 'user' // just to show a private JWT field
-    }
-
-    // generate a signed json web token. By default the signing algorithm is HS256 (HMAC-SHA256), i.e. we will 'sign' with a symmetric secret
-    const token = jwt.sign(jwtClaims, jwtSecret)
-    
-    res.cookie('jwt_session', token)
-
+  genCookie,
+  (req, res) => {
     res.redirect('/')
-
-    // And let us log a link to the jwt.iot debugger, for easy checking/verifying:
-    console.log(`Token sent. Debug at https://jwt.io/?value=${token}`)
-    console.log(`Token secret (for verifying the signature): ${jwtSecret.toString('base64')}`)
   }
 )
 
