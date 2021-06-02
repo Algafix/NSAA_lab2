@@ -1,14 +1,14 @@
 {
     "walrus": {
         "username": "walrus",
-        "password": "$2b$10$YxUpsAivDW3m/pZpFhqSluSR2pV4dOBgmLX1sLZNreEVWuPjY3W.G"
+        "password": "$2b$10$.gI7YiRNBUnCbnpMUWXf8u1t4VYTEEZ22ARKckWupULJPfpxzeJUW"
     },
     "aleix": {
         "username": "aleix",
-        "password": "$2b$10$KcNRhUk.oV43ZKfy2zqYHeCsI53WikoZapXuEzl3CLiibZS05f4Wi"
+        "password": "$2b$10$hZx8cg/1ik6UnVt9t9UOF.wWhhDpUA/EaVr9X4vPqb5GTyoTY8VD2"
     },
     "nsaa": {
         "username": "nsaa",
-        "password": "$2b$10$XjyzE4yMgGn6avPxDdhAFOPRW/5hEPCq6zdMlOt5Vvsi5m4hTmeRi"
+        "password": "$2b$10$nQMXk2ZYFEOJS3vPN61r0uTiA8wMZ7/1YZ0DqIvEOkGpsBdoNmWUK"
     }
 }

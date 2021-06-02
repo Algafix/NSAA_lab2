@@ -1,5 +1,7 @@
 const passport = require("passport");
 const bcrypt = require('bcrypt')
+const radius = require('radius');
+const dgram  = require("dgram");
 const JwtStrategy = require('passport-jwt').Strategy;
 const GitHubStrategy = require('passport-github2').Strategy;
 const LocalStrategy = require('passport-local').Strategy;
@@ -8,8 +10,51 @@ const db = require('./database')
 const jwtSecret = require('./config').jwtSecret;
 const GITHUB_CLIENT_ID = require('./config').GITHUB_CLIENT_ID
 const GITHUB_CLIENT_SECRET = require('./secrets').GITHUB_CLIENT_SECRET
+const RADIUS_SECRET = "testing123"
+const RADIUS_IP     = "127.0.0.1";
+const RADIUS_PORT   = 1812;
 
 
+
+radiusStrat = new LocalStrategy({
+  usernameField: 'username',
+  passwordField: 'password',
+  session      : false
+},
+function (username, password, done) {
+  //username = username+'@upc.edu' 
+  // generate Radius request
+  var request = radius.encode({
+      code: "Access-Request",
+      secret: RADIUS_SECRET,
+      attributes: [
+          ['NAS-IP-Address', RADIUS_IP],
+          ['User-Name', username],
+          ['User-Password', password],
+      ]
+  })
+  // start a socket for communication
+  var rclient = dgram.createSocket("udp4");
+  // prepare reception routine
+  rclient.on('message', function(message) {
+      var response = radius.decode({packet: message, secret: RADIUS_SECRET})
+      // check validation
+      var valid_response = radius.verify_response({ 
+          response: message,
+          request : request,
+          secret  : RADIUS_SECRET
+      })
+      var isValidPass = valid_response && (response.code == 'Access-Accept');
+      // give access (or not)
+      if (isValidPass) {
+          const user = { username: username, description: 'A nice user' }
+          return done(null, user)
+      }
+      return done(null, false)
+  })
+  // send request 
+  rclient.send(request, 0, request.length, RADIUS_PORT, RADIUS_IP);
+})
 
 /*
 Configure the local strategy for use by Passport.
@@ -85,7 +130,8 @@ gitHubStrat = new GitHubStrategy(
 module.exports = {
     gitHubOAuth: gitHubStrat,
     jwtStrat: jwtStrat,
-    localStrat: localStrat
+    localStrat: localStrat,
+    radiusStrat: radiusStrat
 }
 
 

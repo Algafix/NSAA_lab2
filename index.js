@@ -35,6 +35,7 @@ passport.use('jwt_auth', strategies.jwtStrat)
 
 passport.use(strategies.gitHubOAuth)
 
+passport.use('radius', strategies.radiusStrat)
 
 
 // ----------------------------------------------------------- //
@@ -73,6 +74,18 @@ app.post('/login',
   genCookie,
   (req, res) => {
     res.redirect('/')
+  }
+)
+
+app.get('/login_radius', (req, res) => {
+  res.sendFile(path.join(__dirname, 'views/login_radius.html'))
+})
+
+app.post('/login_radius',
+  passport.authenticate('radius', { failureRedirect: '/login', session: false }),
+  genCookie,
+  (req, res) => {
+      res.redirect('/')
   }
 )
 
